@@ -24,7 +24,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const usersCollection = client.db("EduViveDb").collection("user");
     const collageCollection = client.db("EduViveDb").collection("collages");
@@ -35,18 +35,12 @@ async function run() {
 
     const result = await collageCollection.createIndex(indexKeys, indexOptions);
 
-    app.get("/CollageSearchByName/:name", async (req, res) => {
-      const SearchName = req.params.name;
+    // search by text
+    app.get("/collegeName/:text", async (req, res) => {
+      const text = req.params.text;
       const result = await collageCollection
         .find({
-          $or: [
-            {
-              collegeName: { $regex: SearchName, $options: "i" },
-            },
-            {
-              admissionDate: { $regex: SearchName, $options: "i" },
-            },
-          ],
+          $or: [{ collegeName: { $regex: text, $options: "i" } }],
         })
         .toArray();
       res.send(result);
@@ -64,6 +58,46 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/studentInfo/:email", async (req, res) => {
+      const result = await StudentCollection.find({
+        userEmail: req.params.email,
+      }).toArray();
+      res.send(result);
+    });
+
+    app.get("/myCollage/:email", async (req, res) => {
+      const result = await StudentCollection.find({
+        userEmail: req.params.email,
+      }).toArray();
+      res.send(result);
+    });
+
+    // profile
+    app.get("/studentAdmission/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await StudentCollection.findOne(query);
+      // console.log(result);
+      res.send(result);
+    });
+
+    // update profile
+    app.put("/updateprofile/:id", async (req, res) => {
+      const id = req.params.id;
+      const body = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const updateprofile = {
+        $set: {
+          studentName: body.studentName,
+          studentEmail: body.studentEmail,
+          collageName: body.collageName,
+          address: body.address,
+        },
+      };
+      const result = await StudentCollection.updateOne(filter, updateprofile);
+      res.send(result);
+    });
+
     app.get("/research", async (req, res) => {
       const result = await collageCollection.find().toArray();
       res.send(result);
@@ -78,19 +112,45 @@ async function run() {
       console.log(result);
     });
 
-    
-
     // get popular colleges details
     app.get("/popularcolleges/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await collageCollection.findOne(query);
-      res.send(result); 
+      res.send(result);
       console.log(result);
     });
 
     app.get("/popularCollage", async (req, res) => {
       const result = await collageCollection.find().toArray();
+      res.send(result);
+    });
+
+    // for put : update the feedback in a modal
+    app.put("/mycollege/feedback/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const query = { _id: new ObjectId(id) };
+      const collegeInfo = req.body;
+      const options = { upsert: true };
+      console.log(collegeInfo);
+      const updateFeedback = {
+        $set: {
+          feedback: collegeInfo.feedback,
+          ratings: collegeInfo.ratings,
+        },
+      };
+      const result = await StudentCollection.updateOne(
+        query,
+        updateFeedback,
+        options
+      );
+      res.send(result);
+    });
+
+    // for get review from admission collection
+    app.get("/reviews", async (req, res) => {
+      const result = await StudentCollection.find().toArray();
       res.send(result);
     });
 
